@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Buildings, Calendar, ChartPieSlice, Info, ArrowRight, Cube } from '@phosphor-icons/react';
+import { leadService } from '../services/api';
 
 const LeadsAnalytics = () => {
     const [hoveredType, setHoveredType] = useState(null);
     const [selectedType, setSelectedType] = useState(null);
+    const [leads, setLeads] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchLeads = async () => {
+            try {
+                const response = await leadService.getAll();
+                setLeads(response.data || []);
+            } catch (error) {
+                console.error("Leads Fetch Error:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchLeads();
+    }, []);
 
     const handleHover = (type) => {
         setHoveredType(type);
@@ -15,23 +32,25 @@ const LeadsAnalytics = () => {
 
     const activeType = hoveredType || selectedType;
 
+    const getCount = (status) => leads.filter(l => l.status === status).length;
+
     const analyticsData = {
         Hot: {
-            count: 5,
+            count: getCount('Hot'),
             color: '#ff6b6b',
             projects: ['Skyline Towers', 'Green Valley Estate'],
             visits: 8,
             inventory: { available: 12, total: 100, soldPercent: 88 }
         },
         Warm: {
-            count: 7,
+            count: getCount('Warm'),
             color: '#ff9f4d',
             projects: ['Oceanfront Villas'],
             visits: 15,
             inventory: { available: 40, total: 45, soldPercent: 11 }
         },
         Cold: {
-            count: 8,
+            count: getCount('Cold'),
             color: '#4d9fff',
             projects: ['The Nexus Hub'],
             visits: 4,
@@ -40,9 +59,9 @@ const LeadsAnalytics = () => {
     };
 
     const chartData = [
-        { type: 'Hot', value: 5, color: '#ff6b6b' },
-        { type: 'Warm', value: 7, color: '#ff9f4d' },
-        { type: 'Cold', value: 8, color: '#4d9fff' },
+        { type: 'Hot', value: getCount('Hot'), color: '#ff6b6b' },
+        { type: 'Warm', value: getCount('Warm'), color: '#ff9f4d' },
+        { type: 'Cold', value: getCount('Cold'), color: '#4d9fff' },
     ];
 
     const total = chartData.reduce((acc, curr) => acc + curr.value, 0);
@@ -279,13 +298,7 @@ const LeadsAnalytics = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {[
-                                { name: 'Johnathan Smith', project: 'Skyline Towers', status: 'Hot', color: '#ff4d4d', bg: '#ffebeb', last: '2h ago' },
-                                { name: 'Elena Rodriguez', project: 'Oceanfront Villas', status: 'Warm', color: '#ff9f4d', bg: '#fff4eb', last: '5h ago' },
-                                { name: 'David Wilson', project: 'The Nexus Hub', status: 'Cold', color: '#4d9fff', bg: '#ebf4ff', last: 'Yesterday' },
-                                { name: 'Sarah Parker', project: 'Green Valley', status: 'Warm', color: '#ff9f4d', bg: '#fff4eb', last: '3h ago' },
-                                { name: 'Michael Brown', project: 'Skyline Towers', status: 'Hot', color: '#ff4d4d', bg: '#ffebeb', last: '12h ago' },
-                            ].map((lead, i) => (
+                            {leads.slice(0, 10).map((lead, i) => (
                                 <tr key={i} className="table-row" style={{
                                     fontSize: '0.95rem',
                                     background: 'rgba(255, 255, 255, 0.5)',
@@ -293,16 +306,20 @@ const LeadsAnalytics = () => {
                                     transition: 'var(--transition)'
                                 }}>
                                     <td style={{ padding: '1.2rem 0.8rem', fontWeight: 600, borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px' }}>{lead.name}</td>
-                                    <td style={{ padding: '1.2rem 0.8rem', color: 'var(--charcoal)' }}>{lead.project}</td>
+                                    <td style={{ padding: '1.2rem 0.8rem', color: 'var(--charcoal)' }}>{lead.projectInterest || 'General Inquiry'}</td>
                                     <td style={{ padding: '1.2rem 0.8rem' }}>
                                         <span style={{
                                             padding: '6px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
-                                            background: lead.bg, color: lead.color, boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                                            background: lead.status === 'Hot' ? '#ffebeb' : (lead.status === 'Warm' ? '#fff4eb' : '#ebf4ff'),
+                                            color: lead.status === 'Hot' ? '#ff4d4d' : (lead.status === 'Warm' ? '#ff9f4d' : '#4d9fff'),
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                                         }}>
                                             {lead.status}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '1.2rem 0.8rem', color: 'var(--charcoal)', borderTopRightRadius: '10px', borderBottomRightRadius: '10px' }}>{lead.last}</td>
+                                    <td style={{ padding: '1.2rem 0.8rem', color: 'var(--charcoal)', borderTopRightRadius: '10px', borderBottomRightRadius: '10px' }}>
+                                        {new Date(lead.createdAt).toLocaleDateString()}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

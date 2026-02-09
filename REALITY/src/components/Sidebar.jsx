@@ -1,7 +1,7 @@
 import React from 'react';
 import { SquaresFour, Buildings, UsersThree, CalendarCheck, Gear, SignOut, Cube } from '@phosphor-icons/react';
 
-const Sidebar = ({ currentPage, setCurrentPage }) => {
+const Sidebar = ({ currentPage, setCurrentPage, onLogout }) => {
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: <SquaresFour size={24} /> },
         { id: 'projects', label: 'Projects', icon: <Buildings size={24} /> },
@@ -61,15 +61,17 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
 
             <div style={{ marginTop: 'auto' }}>
                 <div
-                    style={navLinkStyle(false)}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    style={navLinkStyle(currentPage === 'settings')}
+                    onClick={() => setCurrentPage('settings')}
+                    onMouseEnter={(e) => { if (currentPage !== 'settings') e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; }}
+                    onMouseLeave={(e) => { if (currentPage !== 'settings') e.currentTarget.style.background = 'transparent'; }}
                 >
                     <Gear size={24} />
                     <span>Settings</span>
                 </div>
                 <div
                     style={navLinkStyle(false)}
+                    onClick={onLogout}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >

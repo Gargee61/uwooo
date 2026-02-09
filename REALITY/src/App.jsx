@@ -5,16 +5,35 @@ import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import LeadsAnalytics from './pages/LeadsAnalytics';
 import SiteVisits from './pages/SiteVisits';
+import Chatbot from './components/Chatbot';
+import Login from './pages/Login';
+import Settings from './pages/Settings';
+import { authService } from './services/api';
 import './App.css';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [user, setUser] = useState(authService.getCurrentUser());
+  const [theme, setTheme] = useState(localStorage.getItem('reality_theme') || 'glass');
 
   useEffect(() => {
     // Simple entrance delay for glassmorphic effect
     setTimeout(() => setIsLoaded(true), 100);
   }, []);
+
+  useEffect(() => {
+    document.body.className = `${theme}-mode`;
+    localStorage.setItem('reality_theme', theme);
+  }, [theme]);
+
+  const handleLogout = () => {
+    console.log("[AUTH] Logging out user...");
+    authService.logout();
+    setUser(null);
+    // Force a reload to clear any residual state/cache
+    window.location.href = '/';
+  };
 
   const renderPage = () => {
     switch (currentPage) {
@@ -22,16 +41,21 @@ function App() {
       case 'projects': return <Projects />;
       case 'leads': return <LeadsAnalytics />;
       case 'visits': return <SiteVisits />;
+      case 'settings': return <Settings theme={theme} setTheme={setTheme} onLogout={handleLogout} />;
       default: return <Dashboard />;
     }
   };
 
+  if (!user) {
+    return <Login onLogin={setUser} />;
+  }
+
   return (
     <div className={`app-container ${isLoaded ? 'loaded' : ''}`} style={{ display: 'flex', minHeight: '100vh', opacity: isLoaded ? 1 : 0, transition: 'opacity 0.8s ease' }}>
-      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
 
       <main style={{ flex: 1, marginLeft: '260px', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Header />
+        <Header user={user} onLogout={handleLogout} />
         <div className="content-area" style={{ flex: 1 }}>
           {renderPage()}
         </div>
@@ -45,6 +69,7 @@ function App() {
         clipPath: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)',
         filter: 'blur(20px)', opacity: 0.2
       }}></div>
+      <Chatbot />
     </div>
   );
 }

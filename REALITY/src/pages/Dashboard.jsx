@@ -1,6 +1,7 @@
-import React from 'react';
-import { UserPlus, Lightning, Calendar, CurrencyDollar, Plus } from '@phosphor-icons/react';
+import React, { useState, useEffect } from 'react';
+import { UserPlus, Lightning, Calendar, CurrencyDollar, Plus, Robot } from '@phosphor-icons/react';
 import LeadStatusChart from '../components/LeadStatusChart';
+import { dashboardService, leadService } from '../services/api';
 
 const MetricCard = ({ icon: Icon, title, value, detail, detailColor, action }) => {
     const [isHovered, setIsHovered] = React.useState(false);
@@ -45,8 +46,29 @@ const MetricCard = ({ icon: Icon, title, value, detail, detailColor, action }) =
 };
 
 const Dashboard = ({ setCurrentPage }) => {
-    const [hoveredStatus, setHoveredStatus] = React.useState(null);
-    const [selectedStatus, setSelectedStatus] = React.useState(null);
+    const [hoveredStatus, setHoveredStatus] = useState(null);
+    const [selectedStatus, setSelectedStatus] = useState(null);
+    const [stats, setStats] = useState(null);
+    const [leads, setLeads] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const statsRes = await dashboardService.getStats();
+                const leadsRes = await leadService.getAll();
+
+                setStats(statsRes.data);
+                setLeads(leadsRes.data || []);
+            } catch (error) {
+                console.error("Dashboard Fetch Error:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
 
     const activeStatus = hoveredStatus || selectedStatus;
 
@@ -56,19 +78,19 @@ const Dashboard = ({ setCurrentPage }) => {
         'Cold': { color: '#4d9fff', projects: ['Oak Ridge', 'Sunset Villas'], conversion: '12%', visits: 12 },
     };
 
-    const leads = [
-        { name: 'Johnathan Smith', budget: '$450k - $600k', status: 'Hot', color: '#ff4d4d', bg: '#ffebeb', assigned: 'Sarah Jenkins', last: '2h ago' },
-        { name: 'Elena Rodriguez', budget: '$1.2M - $1.5M', status: 'Warm', color: '#ff9f4d', bg: '#fff4eb', assigned: 'Michael Chen', last: '5h ago' },
-        { name: 'David Wilson', budget: '$300k - $400k', status: 'Cold', color: '#4d9fff', bg: '#ebf4ff', assigned: 'Sarah Jenkins', last: 'Yesterday' },
-    ];
+    const chartData = stats ? [
+        { label: 'Hot', value: stats.distribution.Hot, color: '#ff4d4d', detail: 'High conversion potential' },
+        { label: 'Warm', value: stats.distribution.Warm, color: '#ff9f4d', detail: 'Active engagement' },
+        { label: 'Cold', value: stats.distribution.Cold, color: '#4d9fff', detail: 'Initial contact made' },
+    ] : null;
 
     const renderLeadsDetail = (isHovered) => (
         <div style={{ display: 'flex', gap: '8px', transition: 'all 0.3s ease' }}>
-            <span style={{ color: isHovered ? '#ff4d4d' : 'inherit', fontWeight: isHovered ? 700 : 500 }}>120 Hot</span>
+            <span style={{ color: isHovered ? '#ff4d4d' : 'inherit', fontWeight: isHovered ? 700 : 500 }}>{stats?.distribution.Hot || 0} Hot</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span style={{ color: isHovered ? '#ff9f4d' : 'inherit', fontWeight: isHovered ? 700 : 500 }}>450 Warm</span>
+            <span style={{ color: isHovered ? '#ff9f4d' : 'inherit', fontWeight: isHovered ? 700 : 500 }}>{stats?.distribution.Warm || 0} Warm</span>
             <span style={{ opacity: 0.3 }}>•</span>
-            <span style={{ color: isHovered ? '#4d9fff' : 'inherit', fontWeight: isHovered ? 700 : 500 }}>714 Cold</span>
+            <span style={{ color: isHovered ? '#4d9fff' : 'inherit', fontWeight: isHovered ? 700 : 500 }}>{stats?.distribution.Cold || 0} Cold</span>
         </div>
     );
 
@@ -77,19 +99,19 @@ const Dashboard = ({ setCurrentPage }) => {
             <MetricCard
                 icon={UserPlus}
                 title="Total Leads"
-                value="1,284"
+                value={stats?.totalLeads || "..."}
                 detail={renderLeadsDetail}
             />
             <MetricCard
                 icon={Lightning}
                 title="Active Projects"
-                value="12"
+                value={stats?.activeProjects || "..."}
                 detail="+2 this month"
                 detailColor="#4CAF50"
                 action={{ label: 'Add Projects' }}
             />
-            <MetricCard icon={Calendar} title="Site Visits" value="48" detail="12 scheduled today" detailColor="var(--pivot-blue)" />
-            <MetricCard icon={CurrencyDollar} title="Projected Revenue" value="$4.2M" detail="15% growth" detailColor="#4CAF50" />
+            <MetricCard icon={Calendar} title="Site Visits" value={stats?.siteVisits || "..."} detail="12 scheduled today" detailColor="var(--pivot-blue)" />
+            <MetricCard icon={CurrencyDollar} title="Projected Revenue" value={stats?.projectedRevenue || "..."} detail="15% growth" detailColor="#4CAF50" />
 
             {/* Leads Distribution & Management Section */}
             <div className="card"
@@ -120,6 +142,7 @@ const Dashboard = ({ setCurrentPage }) => {
                             onHover={setHoveredStatus}
                             onClick={setSelectedStatus}
                             selection={selectedStatus}
+                            data={chartData}
                         />
                     </div>
 
@@ -182,15 +205,24 @@ const Dashboard = ({ setCurrentPage }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {leads.map((lead, i) => (
+                            {leads.slice(0, 5).map((lead, i) => (
                                 <tr key={i} style={{ fontSize: '0.85rem', background: 'rgba(255, 255, 255, 0.4)', transition: 'var(--transition)' }} className="table-row">
                                     <td style={{ padding: '1rem 0.8rem', fontWeight: 600, borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px' }}>{lead.name}</td>
                                     <td style={{ padding: '1rem 0.8rem' }}>
-                                        <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700, background: lead.bg, color: lead.color }}>
+                                        <span style={{
+                                            padding: '4px 10px',
+                                            borderRadius: '20px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            background: lead.status === 'Hot' ? '#ffebeb' : (lead.status === 'Warm' ? '#fff4eb' : '#ebf4ff'),
+                                            color: lead.status === 'Hot' ? '#ff4d4d' : (lead.status === 'Warm' ? '#ff9f4d' : '#4d9fff')
+                                        }}>
                                             {lead.status}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '1rem 0.8rem', borderTopRightRadius: '10px', borderBottomRightRadius: '10px' }}>{lead.last}</td>
+                                    <td style={{ padding: '1rem 0.8rem', borderTopRightRadius: '10px', borderBottomRightRadius: '10px' }}>
+                                        {new Date(lead.createdAt).toLocaleDateString()}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

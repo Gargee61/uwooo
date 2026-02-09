@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 
-const LeadStatusChart = ({ compact = false, onHover, onClick, selection }) => {
-    const data = [
+const LeadStatusChart = ({ compact = false, onHover, onClick, selection, data: propData }) => {
+    const defaultData = [
         { label: 'Hot', value: 5, color: '#ff4d4d', detail: 'High conversion potential' },
         { label: 'Warm', value: 7, color: '#ff9f4d', detail: 'Active engagement' },
         { label: 'Cold', value: 8, color: '#4d9fff', detail: 'Initial contact made' },
     ];
+
+    const data = propData || defaultData;
 
     const [hoveredIndex, setHoveredIndex] = useState(null);
 
