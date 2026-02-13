@@ -54,8 +54,6 @@ const Login = ({ onLogin }) => {
     const handleRoleSelect = (roleObj) => {
         setSelectedRole(roleObj);
         setStep('enter-credentials');
-        // Pre-fill email for demonstration/testing if needed, or leave blank
-        // setEmail(`${roleObj.role}@ai-auto.com`); 
     };
 
     return (
@@ -83,15 +81,19 @@ const Login = ({ onLogin }) => {
             }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                     <div style={{
-                        width: '60px', height: '60px', borderRadius: '16px', background: 'var(--pivot-blue)',
-                        color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        marginBottom: '1rem', boxShadow: '0 8px 20px rgba(0, 71, 171, 0.3)'
+                        width: '70px', height: '70px',
+                        borderRadius: '18px',
+                        background: '#ffffff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        marginBottom: '1.2rem',
+                        boxShadow: '0 8px 30px rgba(0, 71, 171, 0.15)',
+                        border: '1px solid rgba(0, 71, 171, 0.1)'
                     }}>
-                        <Buildings size={32} weight="bold" />
+                        <img src="/logo/AI_Auto.png" alt="AI-AUTO Logo" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
                     </div>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--soft-black)' }}>AI-AUTO</h1>
-                    <p style={{ color: 'var(--charcoal)', fontSize: '0.9rem', opacity: 0.7 }}>
-                        {step === 'select-role' ? 'Builder Dashboard Login' : `${selectedRole.label} Login`}
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#003380', letterSpacing: '-0.5px' }}>AI-AUTO</h1>
+                    <p style={{ color: '#2c3e50', fontSize: '1rem', fontWeight: 600 }}>
+                        {step === 'select-role' ? 'Select a role to enter' : `${selectedRole.label} Login`}
                     </p>
                 </div>
 
@@ -107,9 +109,6 @@ const Login = ({ onLogin }) => {
 
                 {step === 'select-role' ? (
                     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--charcoal)', opacity: 0.6, marginBottom: '0.5rem' }}>
-                            Select a role to enter the dashboard
-                        </p>
                         {roles.map((btn) => (
                             <button
                                 key={btn.role}
@@ -129,12 +128,12 @@ const Login = ({ onLogin }) => {
                 ) : (
                     <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--charcoal)' }}>Email Address</label>
+                            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#2c3e50' }}>Email Address</label>
                             <div className="input-field" style={{
                                 display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
                                 background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', transition: 'all 0.2s'
                             }}>
-                                <User size={20} color="var(--charcoal)" opacity={0.5} />
+                                <User size={20} color="#2c3e50" opacity={0.5} />
                                 <input
                                     type="email"
                                     value={email}
@@ -147,12 +146,12 @@ const Login = ({ onLogin }) => {
                         </div>
 
                         <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--charcoal)' }}>Password</label>
+                            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#2c3e50' }}>Password</label>
                             <div className="input-field" style={{
                                 display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
                                 background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', transition: 'all 0.2s'
                             }}>
-                                <Lock size={20} color="var(--charcoal)" opacity={0.5} />
+                                <Lock size={20} color="#2c3e50" opacity={0.5} />
                                 <input
                                     type="password"
                                     value={password}
