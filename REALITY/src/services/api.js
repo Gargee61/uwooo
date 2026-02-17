@@ -26,6 +26,10 @@ export const authService = {
         }
         return response.data;
     },
+    signup: async (userData) => {
+        const response = await api.post('/signup/signup', userData);
+        return response.data;
+    },
     logout: () => {
         localStorage.removeItem('aiauto_token');
         localStorage.removeItem('aiauto_user');

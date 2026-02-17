@@ -4,14 +4,8 @@ const leadSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: false // Make optional for external leads
-    },
-    name: {
-        type: String,
         required: true
     },
-    email: String,
-    phone: String,
     source: {
         type: String,
         required: true,
@@ -21,7 +15,6 @@ const leadSchema = new mongoose.Schema({
         enum: ['New', 'Hot', 'Warm', 'Cold', 'Converted'],
         default: 'New'
     },
-    projectInterest: String,
     assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

@@ -22,25 +22,20 @@ router.get('/', async (req, res) => {
 // @desc    Create a new lead with user reference and emit socket event
 router.post('/', async (req, res) => {
     try {
-        const { user, name, email, phone, source, status, projectInterest } = req.body;
+        const { user, source } = req.body;
 
-        if (!name || !source) {
-            return res.status(400).json({ message: 'Please provide lead name and source' });
+        if (!user || !source) {
+            return res.status(400).json({ message: 'Please provide user and source' });
         }
 
         const newLead = new Lead({
             user,
-            name,
-            email,
-            phone,
-            source,
-            status: status || 'New',
-            projectInterest
+            source
         });
 
         const savedLead = await newLead.save();
 
-        // Populate potential user data before emitting
+        // Populate user data before emitting
         const populatedLead = await Lead.findById(savedLead._id)
             .populate('user', 'name email')
             .populate('assignedTo', 'name email');
@@ -48,14 +43,14 @@ router.post('/', async (req, res) => {
         // Emit socket event with populated data
         const io = req.app.get('io');
         if (io) {
-            io.emit('lead-added', populatedLead);
-            console.log('📢 Real-time event emitted: lead-added', populatedLead.name);
+            io.emit('newLead', populatedLead);
+            console.log('📢 Real-time event emitted: newLead for user', populatedLead.user.name);
         }
 
         res.status(201).json(populatedLead);
     } catch (err) {
         console.error('❌ Error saving lead:', err.message);
-        res.status(500).json({ error: 'Server Error', details: err.message });
+        res.status(500).send('Server Error');
     }
 });
 

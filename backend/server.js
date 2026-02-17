@@ -1,12 +1,9 @@
 import 'dotenv/config';
 import dns from 'dns';
 
-// Force usage of Google/Cloudflare DNS to resolve MongoDB SRV connection issues
-try {
-    dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch (e) {
-    console.log("Could not set custom DNS servers");
-}
+// Force DNS to use Google's servers to resolve MongoDB SRV records
+// This fixes the ECONNREFUSED error common on some ISPs like Reliance Jio
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 import express from "express";
 import http from "http";
@@ -14,7 +11,6 @@ import cors from "cors";
 import mongoose from "mongoose";
 import { Server } from "socket.io";
 import leadRoutes from "./routes/leadRoutes.js";
-import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
@@ -26,8 +22,6 @@ import supportRoutes from "./routes/supportRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import milestoneRoutes from "./routes/milestoneRoutes.js";
 import siteVisitRoutes from "./routes/siteVisitRoutes.js";
-
-import chatRoutes from "./routes/chatRoutes.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -78,7 +72,6 @@ io.on("connection", (socket) => {
 app.set("io", io);
 
 /* -------------------- ROUTES -------------------- */
-app.use("/api/auth", authRoutes); // Auth route
 app.use("/api/signup", userRoutes); // Signup route
 app.use("/api/lead", leadRoutes);
 app.use("/api/users", userRoutes);
@@ -92,7 +85,6 @@ app.use("/api/support", supportRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/milestones", milestoneRoutes);
 app.use("/api/site-visits", siteVisitRoutes);
-app.use("/api/chat", chatRoutes);
 
 /* -------------------- HEALTH CHECK -------------------- */
 app.get("/", (req, res) => {
