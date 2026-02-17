@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Lock, ArrowRight, Buildings, Warning } from '@phosphor-icons/react';
 import { authService } from '../services/api';
 import { ROLE_CREDENTIALS } from '../config/authConfig';
 
-const Login = ({ onLogin }) => {
+const Login = () => {
+    const navigate = useNavigate();
     const [step, setStep] = useState('select-role');
     const [selectedRole, setSelectedRole] = useState(null);
     const [email, setEmail] = useState('');
@@ -25,24 +27,20 @@ const Login = ({ onLogin }) => {
         setError('');
 
         try {
-            // First check hardcoded credentials
-            const roleCreds = ROLE_CREDENTIALS[selectedRole.role];
-            if (roleCreds && email === roleCreds.email && password === roleCreds.password) {
-                const mockData = {
-                    token: 'mock-jwt-token',
-                    role: selectedRole.role,
-                    name: roleCreds.name,
-                    email: roleCreds.email
-                };
-                localStorage.setItem('aiauto_token', mockData.token);
-                localStorage.setItem('aiauto_user', JSON.stringify(mockData));
-                onLogin(mockData);
-                return;
+            // Delegate all authentication to the API (which handles both hardcoded & DB users)
+            const data = await authService.login({ email, password, role: selectedRole.role });
+
+            // Store token and user data
+            if (data.token) {
+                localStorage.setItem('aiauto_token', data.token);
+                localStorage.setItem('aiauto_user', JSON.stringify(data.user || data)); // Handle potentially different response structures
+                // Force a reload to ensure all states (Context, Recoil, etc.) pick up the new user
+                window.location.href = '/dashboard';
+            } else {
+                throw new Error("No token received from server");
             }
 
-            // Fallback to API
-            const data = await authService.login({ email, password, role: selectedRole.role });
-            onLogin(data);
+
         } catch (err) {
             console.error("Login Error:", err);
             setError(err.response?.data?.error || 'Invalid credentials or connection error');
@@ -93,7 +91,7 @@ const Login = ({ onLogin }) => {
                     </div>
                     <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#003380', letterSpacing: '-0.5px' }}>AI-AUTO</h1>
                     <p style={{ color: '#2c3e50', fontSize: '1rem', fontWeight: 600 }}>
-                        {step === 'select-role' ? 'Select a role to enter' : `${selectedRole.label} Login`}
+                        {step === 'select-role' ? 'Select a role to enter' : (selectedRole?.label + ' Login')}
                     </p>
                 </div>
 
@@ -193,6 +191,12 @@ const Login = ({ onLogin }) => {
                         </button>
                     </form>
                 )}
+
+                <div style={{ marginTop: '1rem', borderTop: '1px solid #eee', width: '100%', paddingTop: '1rem', textAlign: 'center' }}>
+                    <p style={{ fontSize: '0.9rem', color: '#64748b', margin: 0 }}>
+                        Don't have an account? <span onClick={() => navigate('/signup')} style={{ color: 'var(--pivot-blue)', fontWeight: 700, cursor: 'pointer' }}>Create Account</span>
+                    </p>
+                </div>
             </div>
 
             <style>{`

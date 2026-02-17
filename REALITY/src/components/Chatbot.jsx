@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatCircleDots, X, PaperPlaneTilt, Robot, User, DotsThreeOutline } from '@phosphor-icons/react';
-import { chatService } from '../services/api';
+import { chatService, authService } from '../services/api';
 
-const Chatbot = () => {
+const Chatbot = ({ user }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const currentUser = user || authService.getCurrentUser();
     const [messages, setMessages] = useState([
-        { role: 'assistant', content: 'Hello! I am AI-AUTO AI. How can I help you with your property search today?' }
+        {
+            role: 'assistant',
+            content: currentUser?.role === 'builder'
+                ? `Hello ${currentUser.name || 'Builder'}! I am your Construction Assistant. How can I help with your materials, inventory, or site logs today?`
+                : `Hello! I am AI-AUTO AI. How can I help you with your property dashboard today?`
+        }
     ]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -22,25 +28,38 @@ const Chatbot = () => {
     const handleSend = async () => {
         if (!input.trim()) return;
 
+        const currentUser = user || authService.getCurrentUser();
         const userMessage = { role: 'user', content: input };
         setMessages(prev => [...prev, userMessage]);
         setInput('');
         setIsTyping(true);
 
         try {
+            // Recalculate prompt in case user loaded later
+            let rolePrompt = "You are AI-AUTO AI, a real estate assistant. Help users navigate the dashboard, view leads, and manage properties. Be professional and helpful.";
+
+            if (currentUser?.role === 'builder') {
+                rolePrompt = `You are AI-AUTO Builder Assistant. Your PRIMARY focus is helping builders manage construction materials, equipment inventory, site logs, and project progress for Yug AMC. 
+                STRICT RULES:
+                1. ONLY answer questions related to construction materials, site visits, and project inventory.
+                2. If the user asks about other users' private data or non-builder tasks, politely decline and steer them back to construction materials.
+                3. Be professional, technical, and efficient.
+                4. Current User: ${currentUser.name}, Role: Builder.`;
+            }
+
             const response = await chatService.sendMessage({
                 content: input,
                 history: messages.map(m => ({
                     role: m.role === 'assistant' ? 'model' : 'user',
                     content: m.content
                 })),
-                systemInstruction: "You are AI-AUTO AI, a real estate sales assistant for builders. Help users with property details, inventory, and site visits. Be professional and helpful."
+                systemInstruction: rolePrompt
             });
 
             setMessages(prev => [...prev, { role: 'assistant', content: response.reply }]);
         } catch (error) {
             console.error("Chat Error:", error);
-            setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting right now. Please try again later." }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting to the construction database. Please try again in a moment." }]);
         } finally {
             setIsTyping(false);
         }

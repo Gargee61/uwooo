@@ -45,7 +45,11 @@ export const dashboardService = {
 
 export const leadService = {
     getAll: async () => {
-        const response = await api.get('/leads');
+        const response = await api.get('/lead'); // Fixed path to /lead to match backend
+        return response.data;
+    },
+    create: async (leadData) => {
+        const response = await api.post('/lead', leadData);
         return response.data;
     },
     seed: async () => {

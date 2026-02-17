@@ -13,6 +13,8 @@ import Chatbot from './components/Chatbot';
 import GlobalReports from './pages/GlobalReports';
 import BillingAndPlans from './pages/BillingAndPlans';
 import Settings from './pages/Settings';
+import LeadsAnalytics from './pages/LeadsAnalytics';
+import SiteVisits from './pages/SiteVisits';
 import { authService } from './services/api';
 import socketService from './services/socket';
 import './App.css';
@@ -53,6 +55,9 @@ function DashboardApp() {
     if (currentPage === 'settings') return <Settings theme={theme} setTheme={setTheme} />;
     if (currentPage === 'reports') return <GlobalReports setCurrentPage={setCurrentPage} />;
     if (currentPage === 'billing') return <BillingAndPlans setCurrentPage={setCurrentPage} />;
+    if (currentPage === 'leads') return <LeadsAnalytics />;
+    if (currentPage === 'visits') return <SiteVisits />;
+    if (currentPage === 'projects') return <Projects />;
 
     // Default to role-based dashboard if current page is 'dashboard' or unknown
     switch (user?.role) {
@@ -89,7 +94,7 @@ function DashboardApp() {
         clipPath: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)',
         filter: 'blur(20px)', opacity: 0.2
       }}></div>
-      <Chatbot />
+      <Chatbot user={user} />
     </div>
   );
 }

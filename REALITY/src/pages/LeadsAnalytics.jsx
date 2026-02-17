@@ -9,6 +9,7 @@ const LeadsAnalytics = () => {
     const [leads, setLeads] = useState([]);
     const [visits, setVisits] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [simulating, setSimulating] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -17,8 +18,8 @@ const LeadsAnalytics = () => {
                     leadService.getAll(),
                     visitService.getAll()
                 ]);
-                setLeads(leadsRes.data || []);
-                setVisits(visitsRes.data || []);
+                setLeads(leadsRes || []);
+                setVisits(visitsRes || []);
             } catch (error) {
                 console.error("Analytics Fetch Error:", error);
             } finally {
@@ -28,6 +29,7 @@ const LeadsAnalytics = () => {
         fetchData();
 
         socketService.on('lead-added', (newLead) => {
+            console.log("🔥 Real-time lead received:", newLead);
             setLeads(prev => [newLead, ...prev]);
         });
 
@@ -45,6 +47,29 @@ const LeadsAnalytics = () => {
             socketService.off('visit-scheduled');
         };
     }, []);
+
+    const handleSimulateLead = async () => {
+        setSimulating(true);
+        try {
+            // This simulates a lead coming from the Linktree/External source
+            const names = ["Aditya Sharma", "Priya Patel", "Vikram Singh", "Ananya Iyer", "Rahul Verma"];
+            const randomName = names[Math.floor(Math.random() * names.length)];
+
+            await leadService.create({
+                name: randomName,
+                email: `${randomName.toLowerCase().replace(' ', '.')}@example.com`,
+                phone: "8871190020", // Yug AMC contact from Linktree
+                source: "Linktree (Yug AMC)",
+                status: "Warm",
+                projectInterest: "Skyline Towers"
+            });
+            // The list will update automatically via Socket.io!
+        } catch (err) {
+            console.error("Simulation failed:", err);
+        } finally {
+            setSimulating(false);
+        }
+    };
 
     const getStatusData = (status) => {
         const filteredLeads = leads.filter(l => l.status === status);
@@ -99,11 +124,31 @@ const LeadsAnalytics = () => {
             style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}
             onDoubleClick={() => setSelectedType(null)}
         >
-            <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Leads Overview</h1>
-                <p style={{ color: 'var(--charcoal)', fontSize: '0.9rem', marginTop: '5px' }}>
-                    Visual distribution of lead statuses and their impact on operational metrics.
-                </p>
+            <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Leads Overview</h1>
+                    <p style={{ color: 'var(--charcoal)', fontSize: '0.9rem', marginTop: '5px' }}>
+                        Visual distribution of lead statuses and their impact on operational metrics.
+                    </p>
+                </div>
+                <button
+                    onClick={handleSimulateLead}
+                    disabled={simulating}
+                    style={{
+                        padding: '12px 20px',
+                        background: 'var(--pivot-blue)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 15px rgba(0, 71, 171, 0.2)',
+                        transition: 'all 0.3s ease',
+                        opacity: simulating ? 0.7 : 1
+                    }}
+                >
+                    {simulating ? 'Processing...' : 'Simulate Real-time Lead'}
+                </button>
             </div>
 
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -229,9 +274,14 @@ const LeadsAnalytics = () => {
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
                                         <section>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: analyticsData[hoveredType || selectedType].color, marginBottom: '12px' }}>
-                                                <ChartPieSlice size={22} weight="bold" />
-                                                <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Conversion Progress</h4>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: analyticsData[hoveredType || selectedType].color }}>
+                                                    <ChartPieSlice size={22} weight="bold" />
+                                                    <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Conversion Progress</h4>
+                                                </div>
+                                                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: analyticsData[hoveredType || selectedType].color }}>
+                                                    {analyticsData[hoveredType || selectedType].inventory.soldPercent}%
+                                                </span>
                                             </div>
                                             <div style={{ paddingLeft: '8px' }}>
                                                 <div style={{ height: '10px', background: 'var(--light-grey)', borderRadius: '5px', overflow: 'hidden' }}>
@@ -261,6 +311,56 @@ const LeadsAnalytics = () => {
                     </div>
                 </div>
 
+                {/* Lead Source Performance - NEW SECTION */}
+                <div className="card" style={{ padding: '2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', alignItems: 'center' }}>
+                        <div>
+                            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>Lead Source Performance</h2>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--charcoal)', opacity: 0.7, marginTop: '4px' }}>Analyze which platforms are driving the most engagement for Yug AMC</p>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '3rem' }}>
+                        {[
+                            { label: 'WhatsApp', key: 'WhatsApp', color: '#25D366' },
+                            { label: 'Instagram', key: 'Instagram', color: '#E4405F' },
+                            { label: 'Linktree (Yug AMC)', key: 'Linktree (Yug AMC)', color: '#43E17D' },
+                            { label: 'Facebook', key: 'Facebook', color: '#1877F2' }
+                        ].map((platform, idx) => {
+                            const count = leads.filter(l => l.source === platform.key).length;
+                            const maxCount = Math.max(...[1, ...leads.map(l => leads.filter(x => x.source === l.source).length)]);
+                            const percentage = (count / (leads.length || 1)) * 100;
+                            const displayCount = count || (leads.length > 0 ? 0 : [12, 8, 15, 5][idx]); // Demo value if no leads
+                            const displayPercent = leads.length > 0 ? percentage : [40, 25, 45, 15][idx];
+
+                            return (
+                                <div key={idx} style={{ marginBottom: '1.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', padding: '0 4px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--soft-black)' }}>{platform.label}</span>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: 600, background: `${platform.color}15`, color: platform.color, padding: '2px 8px', borderRadius: '10px' }}>
+                                                {displayPercent.toFixed(0)}% Conversion
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: platform.color }}>{displayCount} Leads</span>
+                                    </div>
+                                    <div style={{ height: '8px', width: '100%', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                                        <div
+                                            style={{
+                                                height: '100%',
+                                                width: `${displayPercent}%`,
+                                                background: platform.color,
+                                                borderRadius: '4px',
+                                                transition: 'width 1s cubic-bezier(0.165, 0.84, 0.44, 1)'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 <div className="card" style={{ padding: '2rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
                         <h2 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Leads Management</h2>
@@ -278,7 +378,9 @@ const LeadsAnalytics = () => {
                         <tbody>
                             {leads.slice(0, 10).map((lead, i) => (
                                 <tr key={i} className="table-row" style={{ fontSize: '0.95rem', background: 'rgba(255, 255, 255, 0.5)' }}>
-                                    <td style={{ padding: '1.2rem 0.8rem', fontWeight: 600 }}>{lead.name}</td>
+                                    <td style={{ padding: '1rem 0.8rem', fontWeight: 700, color: 'var(--soft-black)', borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px' }}>
+                                        {lead.name || lead.user?.name || 'Valued Lead'}
+                                    </td>
                                     <td style={{ padding: '1.2rem 0.8rem' }}>{lead.projectInterest || 'General Inquiry'}</td>
                                     <td style={{ padding: '1.2rem 0.8rem' }}>
                                         <span style={{

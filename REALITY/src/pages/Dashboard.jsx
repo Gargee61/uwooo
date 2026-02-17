@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Lightning, Calendar, CurrencyDollar, Plus, Robot } from '@phosphor-icons/react';
 import LeadStatusChart from '../components/LeadStatusChart';
-import { dashboardService, leadService } from '../services/api';
+import { dashboardService, leadService, projectService } from '../services/api';
 import socketService from '../services/socket';
 
 const MetricCard = ({ icon: Icon, title, value, detail, detailColor, action }) => {
@@ -58,9 +58,9 @@ const Dashboard = ({ setCurrentPage }) => {
                     projectService.getAll()
                 ]);
 
-                setStats(statsRes.data);
-                setLeads(leadsRes.data || []);
-                setProjects(projectsRes.data || []);
+                setStats(statsRes);
+                setLeads(leadsRes || []);
+                setProjects(projectsRes || []);
             } catch (error) {
                 console.error("Dashboard Fetch Error:", error);
             } finally {
@@ -227,7 +227,9 @@ const Dashboard = ({ setCurrentPage }) => {
                         <tbody>
                             {leads.slice(0, 5).map((lead, i) => (
                                 <tr key={i} style={{ fontSize: '0.85rem', background: 'rgba(255, 255, 255, 0.4)' }} className="table-row">
-                                    <td style={{ padding: '1rem 0.8rem', fontWeight: 600, borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px' }}>{lead.name}</td>
+                                    <td style={{ padding: '1rem 0.8rem', fontWeight: 700, color: 'var(--soft-black)', borderTopLeftRadius: '10px', borderBottomLeftRadius: '10px' }}>
+                                        {lead.name || lead.user?.name || 'Valued Lead'}
+                                    </td>
                                     <td style={{ padding: '1rem 0.8rem' }}>
                                         <span style={{
                                             padding: '4px 10px',

@@ -24,6 +24,7 @@ const Sidebar = ({ currentPage, setCurrentPage, onLogout }) => {
                 return [
                     ...baseItems,
                     { id: 'projects', label: 'Portfolio', icon: <Buildings size={24} /> },
+                    { id: 'leads', label: 'Leads Analytics', icon: <UsersThree size={24} /> },
                 ];
             case 'civil_engineer':
                 return [
