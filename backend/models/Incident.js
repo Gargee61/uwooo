@@ -9,20 +9,31 @@ const incidentSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    severity: {
+    hazardType: {
         type: String,
-        enum: ['Blocker', 'High', 'Medium', 'Low'],
-        default: 'Medium'
-    },
-    location: {
-        type: String,
+        enum: ['Electrical', 'Structural', 'Fire', 'Machinery', 'Chemical', 'Working at Height', 'Excavation', 'Other'],
         required: false
     },
+    severity: {
+        type: String,
+        enum: ['Low', 'Medium', 'High', 'Critical'],
+        default: 'Medium'
+    },
+    location: String,
+    areaZone: String,
     status: {
         type: String,
-        enum: ['Open', 'In Progress', 'Resolved', 'Closed'],
+        enum: ['Open', 'In Progress', 'Mitigated', 'Closed'],
         default: 'Open'
     },
+    actionsTaken: [{
+        type: String
+    }],
+    controlMeasures: String,
+    assignedTo: String,
+    dueDate: Date,
+    complianceStandard: String,
+    riskScore: Number,
     reportedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

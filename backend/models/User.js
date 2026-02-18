@@ -10,15 +10,19 @@ const userSchema = new mongoose.Schema({
         required: true,
         unique: true,
     },
+    password: {
+        type: String,
+        required: true,
+    },
     role: {
         type: String,
-        enum: ['Admin', 'Builder', 'Civil Engineer', 'Plumber', 'Client'],
+        enum: ['Admin', 'Builder', 'Civil Engineer', 'Site Manager', 'Client'],
         default: 'Client',
     },
     status: {
         type: String,
         enum: ['Active', 'Pending', 'Inactive'],
-        default: 'Active',
+        default: 'Pending',
     },
     createdAt: {
         type: Date,

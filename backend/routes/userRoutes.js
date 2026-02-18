@@ -3,33 +3,44 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
+import bcrypt from 'bcryptjs';
+
 // @route   POST /api/signup
 // @desc    Create a new user (signup)
 router.post('/signup', async (req, res) => {
     try {
-        const { name, email } = req.body;
+        const { name, email, password, role } = req.body;
 
-        if (!name || !email) {
-            return res.status(400).json({ message: 'Please provide name and email' });
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: 'Please provide name, email and password' });
         }
 
         // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(200).json(existingUser); // Return existing user
+            return res.status(400).json({ message: 'User already exists with this email' });
         }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
         const newUser = new User({
             name,
             email,
-            role: 'Client',
-            status: 'Active'
+            password: hashedPassword,
+            role: role || 'Client',
+            status: role === 'Admin' ? 'Active' : 'Pending'
         });
 
         const savedUser = await newUser.save();
-        console.log('✅ New user signed up:', savedUser.name);
+        console.log(`✅ New user signed up: ${savedUser.name} as ${savedUser.role} (Status: ${savedUser.status})`);
 
-        res.status(201).json(savedUser);
+        // Don't send password back
+        const userResponse = savedUser.toObject();
+        delete userResponse.password;
+
+        res.status(201).json(userResponse);
     } catch (err) {
         console.error('❌ Error during signup:', err.message);
         res.status(500).send('Server Error');
@@ -52,15 +63,20 @@ router.get('/', async (req, res) => {
 // @desc    Create a new user and emit socket event
 router.post('/', async (req, res) => {
     try {
-        const { name, email, role, status } = req.body;
+        const { name, email, password, role, status } = req.body;
 
-        if (!name || !email) {
-            return res.status(400).json({ message: 'Please provide name and email' });
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: 'Please provide name, email and password' });
         }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
         const newUser = new User({
             name,
             email,
+            password: hashedPassword,
             role: role || 'Client',
             status: status || 'Active'
         });

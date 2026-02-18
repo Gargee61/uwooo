@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Envelope, Lock, ArrowRight, Warning, CheckCircle } from '@phosphor-icons/react';
+import { User, Envelope, Lock, ArrowRight, Warning, CheckCircle, Briefcase } from '@phosphor-icons/react';
 import { authService } from '../services/api';
 
 const Signup = () => {
     const navigate = useNavigate();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [role, setRole] = useState('Client');
     const [password, setPassword] = useState(''); // Backend doesn't seem to use password yet but good for UI
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -18,7 +19,7 @@ const Signup = () => {
         setError('');
 
         try {
-            await authService.signup({ name, email });
+            await authService.signup({ name, email, password, role });
             setSuccess(true);
             setTimeout(() => {
                 navigate('/login');
@@ -64,7 +65,7 @@ const Signup = () => {
                         boxShadow: '0 8px 30px rgba(0, 71, 171, 0.15)',
                         border: '1px solid rgba(0, 71, 171, 0.1)'
                     }}>
-                        <img src="/logo/AI_Auto.png" alt="AI-AUTO Logo" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
+                        <img src="/logo/AI-Auto.png" alt="AI-AUTO Logo" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
                     </div>
                     <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#003380', letterSpacing: '-0.5px' }}>AI-AUTO</h1>
                     <p style={{ color: '#2c3e50', fontSize: '1rem', fontWeight: 600 }}>Create your account</p>
@@ -125,6 +126,28 @@ const Signup = () => {
                                     required
                                     style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.95rem' }}
                                 />
+                            </div>
+                        </div>
+
+                        <div className="input-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#2c3e50' }}>Role</label>
+                            <div className="input-field" style={{
+                                display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
+                                background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', transition: 'all 0.2s'
+                            }}>
+                                <Briefcase size={20} color="#2c3e50" opacity={0.5} />
+                                <select
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value)}
+                                    required
+                                    style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.95rem', background: 'transparent', cursor: 'pointer', color: '#334155' }}
+                                >
+                                    <option value="Client">Client/Buyer</option>
+                                    <option value="Builder">Builder</option>
+                                    <option value="Civil Engineer">Civil Engineer</option>
+                                    <option value="Site Manager">Site Manager</option>
+                                    <option value="Admin">Admin</option>
+                                </select>
                             </div>
                         </div>
 

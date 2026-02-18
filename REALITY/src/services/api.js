@@ -22,7 +22,7 @@ export const authService = {
         const response = await api.post('/auth/login', credentials);
         if (response.data.token) {
             localStorage.setItem('aiauto_token', response.data.token);
-            localStorage.setItem('aiauto_user', JSON.stringify(response.data));
+            localStorage.setItem('aiauto_user', JSON.stringify(response.data.user || response.data));
         }
         return response.data;
     },

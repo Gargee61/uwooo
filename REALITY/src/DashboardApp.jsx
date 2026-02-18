@@ -15,6 +15,7 @@ import BillingAndPlans from './pages/BillingAndPlans';
 import Settings from './pages/Settings';
 import LeadsAnalytics from './pages/LeadsAnalytics';
 import SiteVisits from './pages/SiteVisits';
+import ManageAttendance from './pages/dashboards/ManageAttendance';
 import { authService } from './services/api';
 import socketService from './services/socket';
 import './App.css';
@@ -58,13 +59,14 @@ function DashboardApp() {
     if (currentPage === 'leads') return <LeadsAnalytics />;
     if (currentPage === 'visits') return <SiteVisits />;
     if (currentPage === 'projects') return <Projects />;
+    if (currentPage === 'manage-attendance') return <ManageAttendance setCurrentPage={setCurrentPage} />;
 
     // Default to role-based dashboard if current page is 'dashboard' or unknown
-    switch (user?.role) {
+    switch (user?.role?.toLowerCase()) {
       case 'admin': return <AdminDashboard setCurrentPage={setCurrentPage} />;
       case 'builder': return <BuilderDashboard />;
       case 'civil_engineer': return <CivilEngineerDashboard />;
-      case 'project_site': return <ProjectSiteDashboard />;
+      case 'project_site': return <ProjectSiteDashboard setCurrentPage={setCurrentPage} />;
       case 'client': return <ClientDashboard />;
       default: return <Dashboard setCurrentPage={setCurrentPage} />;
     }

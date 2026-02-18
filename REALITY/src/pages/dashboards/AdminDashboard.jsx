@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     UserPlus, Gear, ShieldCheck, ToggleLeft, ToggleRight,
     PencilSimple, Plus, CreditCard, ListBullets, ChartBar,
-    CaretRight, BellRinging, Globe, Lock, Download
+    CaretRight, BellRinging, Globe, Lock, Download, Warning
 } from '@phosphor-icons/react';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config/api';
@@ -12,19 +12,14 @@ import CreateUserModal from '../../components/CreateUserModal';
 const AdminDashboard = ({ setCurrentPage }) => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [users, setUsers] = useState([]);
+    const [incidents, setIncidents] = useState([]);
     const [stats, setStats] = useState({
         activeSubscriptions: 0,
         systemHealth: '99.9%',
         pendingApprovals: 0,
-        auditAlerts: 0
+        safetyHealth: 'Stable'
     });
     const [loading, setLoading] = useState(true);
-
-    const workflows = [
-        { id: 1, name: 'Auto-Assign Civil Engineer', trigger: 'Project Creation', status: 'Enabled' },
-        { id: 2, name: 'Payment Reminder Notification', trigger: 'Invoice Due', status: 'Disabled' },
-        { id: 3, name: 'Daily Progress Report Alert', trigger: 'Site Activity Log', status: 'Enabled' },
-    ];
 
     const logs = [
         { id: 1, action: 'User Deactivated', user: 'Bob Wilson', time: '2 hours ago', status: 'Security' },
@@ -33,7 +28,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
     ];
 
     useEffect(() => {
-        fetchUsers();
+        fetchDashboardData();
 
         // Real-time listeners
         socketService.on('newUser', (user) => {
@@ -46,22 +41,54 @@ const AdminDashboard = ({ setCurrentPage }) => {
             setUsers(prev => prev.map(u => u._id === updatedUser._id ? updatedUser : u));
         });
 
+        socketService.on('incidentReported', (incident) => {
+            setIncidents(prev => [incident, ...prev]);
+            fetchDashboardData();
+        });
+
+        socketService.on('taskUpdated', fetchDashboardData);
+        socketService.on('attendanceUpdated', fetchDashboardData);
+
         return () => {
             socketService.off('newUser');
             socketService.off('userUpdated');
+            socketService.off('incidentReported');
+            socketService.off('taskUpdated');
+            socketService.off('attendanceUpdated');
         };
     }, []);
 
-    const fetchUsers = async () => {
+    const fetchDashboardData = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/users`);
-            setUsers(response.data);
+            const [usersRes, incidentsRes, attStatsRes, tasksRes] = await Promise.all([
+                axios.get(`${API_BASE_URL}/users`),
+                axios.get(`${API_BASE_URL}/site-ops/incidents`).catch(() => ({ data: [] })),
+                axios.get(`${API_BASE_URL}/attendance/stats`).catch(() => ({ data: { totalWorkers: 0, present: 0 } })),
+                axios.get(`${API_BASE_URL}/tasks`).catch(() => ({ data: [] }))
+            ]);
+
+            setUsers(usersRes.data);
+            setIncidents(incidentsRes.data);
+
+            const attendanceRate = attStatsRes.data.totalWorkers > 0 ? (attStatsRes.data.present / attStatsRes.data.totalWorkers) : 1;
+            const criticalCount = incidentsRes.data.filter(i => i.severity === 'Critical').length;
+
+            // Site Productivity: Weighted avg of Task Progress (70%) and Manpower Presence (30%)
+            const totalTasks = tasksRes.data.length;
+            const completedTasks = tasksRes.data.filter(t => t.status === 'Completed').length;
+            const taskProd = totalTasks > 0 ? (completedTasks / totalTasks) : 0;
+            const productivity = Math.round((taskProd * 0.7 + attendanceRate * 0.3) * 100);
+
             setStats(prev => ({
                 ...prev,
-                activeSubscriptions: response.data.filter(u => u.status === 'Active').length
+                activeSubscriptions: usersRes.data.filter(u => u.status === 'Active').length,
+                pendingApprovals: usersRes.data.filter(u => u.status === 'Pending').length,
+                safetyHealth: criticalCount > 0 ? 'Urgent Review' : 'Stable',
+                manpowerHealth: `${(attendanceRate * 100).toFixed(0)}%`,
+                siteProductivity: `${productivity}%`
             }));
         } catch (error) {
-            console.error('Error fetching users:', error);
+            console.error('Error fetching dashboard data:', error);
         } finally {
             setLoading(false);
         }
@@ -69,11 +96,20 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
     const toggleStatus = async (id) => {
         const user = users.find(u => u._id === id);
-        const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
+        let newStatus;
+
+        if (user.status === 'Pending') {
+            newStatus = 'Active';
+        } else {
+            newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
+        }
 
         try {
             await axios.patch(`${API_BASE_URL}/users/${id}`, { status: newStatus });
             setUsers(users.map(u => u._id === id ? { ...u, status: newStatus } : u));
+
+            // Refresh stats
+            fetchDashboardData();
         } catch (error) {
             console.error('Error updating user status:', error);
         }
@@ -84,13 +120,16 @@ const AdminDashboard = ({ setCurrentPage }) => {
             const response = await axios.post(`${API_BASE_URL}/users`, {
                 name: userData.name || `${userData.firstName} ${userData.lastName}`,
                 email: userData.email,
+                password: userData.tempPassword, // Pass the generated password
                 role: userData.roles[0] || 'Client',
                 status: userData.status || 'Active'
             });
             setUsers([response.data, ...users]);
             setShowCreateModal(false);
+            fetchDashboardData();
         } catch (error) {
             console.error('Error creating user:', error);
+            alert("Failed to create user. Ensure the email is unique.");
         }
     };
 
@@ -130,15 +169,40 @@ const AdminDashboard = ({ setCurrentPage }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
                 {[
                     { label: 'Active Subscriptions', value: stats.activeSubscriptions, color: 'var(--pivot-blue)' },
-                    { label: 'System Health', value: stats.systemHealth, color: '#4CAF50' },
-                    { label: 'Pending Approvals', value: stats.pendingApprovals, color: '#ff9f4d' },
-                    { label: 'Audit Alerts', value: stats.auditAlerts, color: '#e53e3e' }
+                    { label: 'Manpower Health', value: stats.manpowerHealth || '0%', color: '#0047AB' },
+                    { label: 'Site Productivity', value: stats.siteProductivity || '0%', color: '#6366f1' },
+                    { label: 'Safety Health', value: stats.safetyHealth, color: stats.safetyHealth === 'Stable' ? '#4CAF50' : '#e53e3e' }
                 ].map((stat, i) => (
                     <div key={i} className="card" style={{ padding: '1.2rem' }}>
                         <div style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: '5px' }}>{stat.label}</div>
                         <div style={{ fontSize: '1.5rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
                     </div>
                 ))}
+            </div>
+
+            {/* Section 0: Global Safety Overview (New) */}
+            <div className="card" style={{ padding: '1.5rem', marginBottom: '2rem', borderLeft: '6px solid #e53e3e' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.2rem', margin: 0 }}>
+                        <Warning size={24} color="#e53e3e" weight="bold" /> Global Safety & High-Risk Trends
+                    </h3>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e53e3e', background: '#feeded', padding: '4px 12px', borderRadius: '8px' }}>
+                        {incidents.filter(i => i.severity === 'Critical').length} Critical Issues
+                    </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+                    {incidents.filter(i => i.status !== 'Closed').slice(0, 3).map(incident => (
+                        <div key={incident._id} style={{ padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: incident.severity === 'Critical' ? '#e53e3e' : '#475569' }}>{incident.hazardType || 'Hazard'}</span>
+                                <span style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.6 }}>{incident.status}</span>
+                            </div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '4px' }}>{incident.title}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Project: {incident.areaZone || 'Global'}</div>
+                        </div>
+                    ))}
+                    {incidents.length === 0 && <p style={{ gridColumn: 'span 3', textAlign: 'center', color: '#64748b', padding: '1rem' }}>No active safety hazards reported.</p>}
+                </div>
             </div>
 
             {/* Section 1: User Management & Permissions */}
@@ -163,8 +227,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
                                 <td style={{ padding: '1rem' }}>
                                     <span style={{
                                         padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 700,
-                                        background: u.status === 'Active' ? '#e6f4ea' : '#fff0f0',
-                                        color: u.status === 'Active' ? '#1e7e34' : '#e53e3e'
+                                        background: u.status === 'Active' ? '#e6f4ea' : u.status === 'Pending' ? '#fffbeb' : '#fff0f0',
+                                        color: u.status === 'Active' ? '#1e7e34' : u.status === 'Pending' ? '#b45309' : '#e53e3e'
                                     }}>{u.status}</span>
                                 </td>
                                 <td style={{ padding: '1rem', textAlign: 'right' }}>
@@ -257,7 +321,21 @@ const AdminDashboard = ({ setCurrentPage }) => {
                     </div>
                 </div>
             </div>
-        </div>
+
+            <style>{`
+                .card {
+                    background: white;
+                    border-radius: 20px;
+                    padding: 1.5rem;
+                    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.18);
+                    transition: all 0.3s ease;
+                }
+                .card:hover {
+                    box-shadow: 0 12px 40px rgba(0, 71, 171, 0.08);
+                }
+            `}</style>
+        </div >
     );
 };
 

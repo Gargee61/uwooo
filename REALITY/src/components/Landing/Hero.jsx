@@ -19,7 +19,7 @@ const Hero = () => {
                         Advanced. Intelligent. Seamless.
                     </p>
                     <div className="hero-cta">
-                        <Link to="/dashboard" className="btn btn-primary">Get Started</Link>
+                        <Link to="/builders-learn-more" className="btn btn-primary">Learn More</Link>
                         <Link to="/dashboard" className="btn btn-secondary">Dashboard</Link>
                     </div>
                 </div>

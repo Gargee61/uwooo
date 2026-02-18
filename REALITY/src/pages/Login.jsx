@@ -87,7 +87,7 @@ const Login = () => {
                         boxShadow: '0 8px 30px rgba(0, 71, 171, 0.15)',
                         border: '1px solid rgba(0, 71, 171, 0.1)'
                     }}>
-                        <img src="/logo/AI_Auto.png" alt="AI-AUTO Logo" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
+                        <img src="/logo/AI-Auto.png" alt="AI-AUTO Logo" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
                     </div>
                     <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#003380', letterSpacing: '-0.5px' }}>AI-AUTO</h1>
                     <p style={{ color: '#2c3e50', fontSize: '1rem', fontWeight: 600 }}>
