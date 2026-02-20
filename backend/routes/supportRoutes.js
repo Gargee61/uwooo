@@ -19,7 +19,7 @@ router.get('/user/:userId', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const {
-            email, issueType, message, userId, priority, relatedTo,
+            email, name, issueType, message, userId, priority, relatedTo,
             projectName, category, title, location, attachments,
             standardsReference, requestedAction, assignTo,
             expectedTimeline, impactIfDelayed, status: requestedStatus
@@ -34,10 +34,11 @@ router.post('/', async (req, res) => {
 
         const newTicket = new Support({
             email,
+            name,
             requestId,
             issueType,
             message,
-            userId,
+            userId: userId || null,
             priority: priority || 'Normal',
             relatedTo,
             projectName,

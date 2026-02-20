@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { logo, name, faqs } from '../../../config/constants';
 import { apis } from '../../../config/api';
+import { authService } from '../../../services/api';
 import PrivacyPolicyModal from '../modals/PrivacyPolicyModal';
 import TermsOfServiceModal from '../modals/TermsOfServiceModal';
 import CookiePolicyModal from '../modals/CookiePolicyModal';
@@ -27,6 +28,12 @@ const Footer = () => {
     const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
 
+    // Visitor Identification
+    const [isIdModalOpen, setIsIdModalOpen] = useState(false);
+    const [visitorName, setVisitorName] = useState(localStorage.getItem('aiauto_visitor_name') || '');
+    const [pendingPlatform, setPendingPlatform] = useState(null);
+    const [supportName, setSupportName] = useState('');
+
     const issueOptions = [
         "General Inquiry",
         "Payment Issue",
@@ -36,20 +43,60 @@ const Footer = () => {
         "Other"
     ];
 
+    const handleSocialClick = async (platform) => {
+        const currentUser = authService.getCurrentUser();
+        const activeName = currentUser?.name || visitorName;
+
+        if (!activeName) {
+            setPendingPlatform(platform);
+            setIsIdModalOpen(true);
+            return;
+        }
+
+        try {
+            await axios.post(apis.lead, {
+                source: platform,
+                name: activeName === visitorName ? `${activeName} (${platform})` : activeName,
+                status: 'Warm',
+                projectInterest: 'Landing Page Interest'
+            });
+            console.log(`Lead tracked for ${platform}`);
+        } catch (error) {
+            console.error(`Failed to track lead for ${platform}`, error);
+        }
+    };
+
+    const handleIdentificationSubmit = (e) => {
+        e.preventDefault();
+        if (!visitorName.trim()) return;
+        localStorage.setItem('aiauto_visitor_name', visitorName);
+        setIsIdModalOpen(false);
+        if (pendingPlatform) {
+            handleSocialClick(pendingPlatform);
+            setPendingPlatform(null);
+        }
+    };
+
     const handleSupportSubmit = async () => {
         if (!issueText.trim()) return;
         setIsSending(true);
         setSendStatus(null);
+
+        const currentUser = authService.getCurrentUser();
+        const activeName = currentUser?.name || supportName || visitorName || 'Anonymous Guest';
+        const activeEmail = currentUser?.email || (activeName === visitorName ? "guest-visitor@ai-auto.com" : "support-guest@ai-auto.com");
+
         try {
-            // Note: In a real app, you'd get the user ID from context/store
             await axios.post(apis.support, {
-                email: "guest@ai-auto.com",
+                email: activeEmail,
+                name: activeName,
                 issueType,
                 message: issueText,
-                userId: null
+                userId: currentUser?._id || null
             });
             setSendStatus('success');
             setIssueText('');
+            setSupportName('');
             setTimeout(() => setSendStatus(null), 3000);
         } catch (error) {
             console.error("Support submission failed", error);
@@ -94,6 +141,7 @@ const Footer = () => {
                                         rel="noopener noreferrer"
                                         className="social-icon"
                                         aria-label={social.label}
+                                        onClick={() => handleSocialClick(social.label)}
                                     >
                                         <social.Icon size={20} color="currentColor" />
                                     </a>
@@ -127,15 +175,16 @@ const Footer = () => {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="contact-item"
+                                    onClick={() => handleSocialClick('Google Maps')}
                                 >
                                     <MapPin className="contact-icon" />
                                     <p>Jabalpur, Madhya Pradesh, India</p>
                                 </a>
-                                <a href="mailto:admin@uwo24.com" className="contact-item">
+                                <a href="mailto:admin@uwo24.com" className="contact-item" onClick={() => handleSocialClick('Email')}>
                                     <Mail className="contact-icon" />
                                     <span>admin@uwo24.com</span>
                                 </a>
-                                <a href="tel:+918358990909" className="contact-item">
+                                <a href="tel:+918358990909" className="contact-item" onClick={() => handleSocialClick('Phone')}>
                                     <Phone className="contact-icon" />
                                     <span>+91 83589 90909</span>
                                 </a>
@@ -234,6 +283,19 @@ const Footer = () => {
                                                 <ChevronDown className="select-chevron" />
                                             </div>
                                         </div>
+                                        {!authService.getCurrentUser() && (
+                                            <div className="form-group">
+                                                <label>Your Name</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-select" // Reusing styles
+                                                    style={{ cursor: 'text' }}
+                                                    placeholder="Enter your name"
+                                                    value={supportName || visitorName}
+                                                    onChange={(e) => setSupportName(e.target.value)}
+                                                />
+                                            </div>
+                                        )}
                                         <div className="form-group">
                                             <label>Describe Your Issue</label>
                                             <textarea
@@ -281,6 +343,49 @@ const Footer = () => {
                                     Close
                                 </button>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Visitor Identification Modal */}
+            <AnimatePresence>
+                {isIdModalOpen && (
+                    <div className="modal-overlay">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            className="id-modal-container"
+                        >
+                            <button onClick={() => setIsIdModalOpen(false)} className="close-modal-btn" style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+                                <X size={20} />
+                            </button>
+
+                            <div className="id-modal-icon">
+                                <ArrowRight size={32} />
+                            </div>
+
+                            <h3 className="id-modal-title">Welcome to {name}</h3>
+                            <p className="id-modal-desc">Tell us who's visiting so we can better assist you.</p>
+
+                            <form onSubmit={handleIdentificationSubmit}>
+                                <div className="id-input-group">
+                                    <label>What's your name?</label>
+                                    <input
+                                        type="text"
+                                        className="id-input"
+                                        placeholder="Enter your name"
+                                        autoFocus
+                                        value={visitorName}
+                                        onChange={(e) => setVisitorName(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <button type="submit" className="id-modal-submit" disabled={!visitorName.trim()}>
+                                    Continue to {pendingPlatform}
+                                </button>
+                            </form>
                         </motion.div>
                     </div>
                 )}

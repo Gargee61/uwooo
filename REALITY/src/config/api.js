@@ -4,6 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001
 
 export const apis = {
     support: `${API_BASE_URL}/support`,
+    lead: `${API_BASE_URL}/lead`,
     // Add more API endpoints as needed
 };
 

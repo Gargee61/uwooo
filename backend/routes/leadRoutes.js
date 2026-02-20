@@ -19,38 +19,38 @@ router.get('/', async (req, res) => {
 });
 
 // @route   POST /api/lead
-// @desc    Create a new lead with user reference and emit socket event
+// @desc    Create a new lead with flexible fields and emit socket event
 router.post('/', async (req, res) => {
     try {
-        const { user, source } = req.body;
+        const { user, source, name, email, phone, status, projectInterest } = req.body;
 
-        if (!user || !source) {
-            return res.status(400).json({ message: 'Please provide user and source' });
-        }
+        if (!source) return res.status(400).json({ message: 'Source missing' });
 
         const newLead = new Lead({
-            user,
-            source
+            user: user || null,
+            name,
+            email,
+            phone,
+            source,
+            status: status || 'New',
+            projectInterest
         });
+        const saved = await newLead.save();
 
-        const savedLead = await newLead.save();
-
-        // Populate user data before emitting
-        const populatedLead = await Lead.findById(savedLead._id)
+        const populatedLead = await Lead.findById(saved._id)
             .populate('user', 'name email')
             .populate('assignedTo', 'name email');
 
-        // Emit socket event with populated data
         const io = req.app.get('io');
         if (io) {
-            io.emit('newLead', populatedLead);
-            console.log('📢 Real-time event emitted: newLead for user', populatedLead.user.name);
+            io.emit('lead-added', populatedLead);
+            console.log('📢 Real-time event emitted: lead-added', populatedLead.name || 'Anonymous');
         }
 
         res.status(201).json(populatedLead);
     } catch (err) {
-        console.error('❌ Error saving lead:', err.message);
-        res.status(500).send('Server Error');
+        console.error('❌ Error saving lead:', err.stack || err);
+        res.status(500).json({ error: err.message });
     }
 });
 

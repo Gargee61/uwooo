@@ -52,14 +52,17 @@ const LeadsAnalytics = () => {
         setSimulating(true);
         try {
             // This simulates a lead coming from the Linktree/External source
-            const names = ["Aditya Sharma", "Priya Patel", "Vikram Singh", "Ananya Iyer", "Rahul Verma"];
-            const randomName = names[Math.floor(Math.random() * names.length)];
+            const randomNames = ["Aarav Sharma", "Priya Patel", "Vikram Singh", "Ananya Iyer", "Rahul Verma"];
+            const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
+
+            const platforms = ["Instagram", "WhatsApp", "LinkedIn", "Facebook", "Twitter"];
+            const platform = platforms[Math.floor(Math.random() * platforms.length)];
 
             await leadService.create({
-                name: randomName,
+                name: `${randomName} (${platform})`,
                 email: `${randomName.toLowerCase().replace(' ', '.')}@example.com`,
-                phone: "8871190020", // Yug AMC contact from Linktree
-                source: "Linktree (Yug AMC)",
+                phone: "8871190020",
+                source: platform,
                 status: "Warm",
                 projectInterest: "Skyline Towers"
             });
@@ -103,9 +106,9 @@ const LeadsAnalytics = () => {
 
     const hasLeads = leads.length > 0;
     const chartData = [
-        { type: 'Hot', value: analyticsData.Hot.count || (hasLeads ? 0 : 3), color: '#ff6b6b' },
-        { type: 'Warm', value: analyticsData.Warm.count || (hasLeads ? 0 : 5), color: '#ff9f4d' },
-        { type: 'Cold', value: analyticsData.Cold.count || (hasLeads ? 0 : 2), color: '#4d9fff' },
+        { type: 'Hot', value: analyticsData.Hot.count, color: analyticsData.Hot.color },
+        { type: 'Warm', value: analyticsData.Warm.count, color: analyticsData.Warm.color },
+        { type: 'Cold', value: analyticsData.Cold.count, color: analyticsData.Cold.color },
     ];
 
     const total = chartData.reduce((acc, curr) => acc + curr.value, 0);
@@ -324,14 +327,12 @@ const LeadsAnalytics = () => {
                         {[
                             { label: 'WhatsApp', key: 'WhatsApp', color: '#25D366' },
                             { label: 'Instagram', key: 'Instagram', color: '#E4405F' },
-                            { label: 'Linktree (Yug AMC)', key: 'Linktree (Yug AMC)', color: '#43E17D' },
-                            { label: 'Facebook', key: 'Facebook', color: '#1877F2' }
+                            { label: 'Linktree', key: 'Linktree', color: '#43E17D' },
+                            { label: 'Website', key: 'Website', color: '#1877F2' }
                         ].map((platform, idx) => {
                             const count = leads.filter(l => l.source === platform.key).length;
-                            const maxCount = Math.max(...[1, ...leads.map(l => leads.filter(x => x.source === l.source).length)]);
-                            const percentage = (count / (leads.length || 1)) * 100;
-                            const displayCount = count || (leads.length > 0 ? 0 : [12, 8, 15, 5][idx]); // Demo value if no leads
-                            const displayPercent = leads.length > 0 ? percentage : [40, 25, 45, 15][idx];
+                            const percentage = leads.length > 0 ? (count / leads.length) * 100 : [40, 25, 45, 15][idx];
+                            const displayCount = hasLeads ? count : [12, 8, 15, 5][idx]; // Demo value if no leads at all in DB
 
                             return (
                                 <div key={idx} style={{ marginBottom: '1.5rem' }}>
@@ -339,7 +340,7 @@ const LeadsAnalytics = () => {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--soft-black)' }}>{platform.label}</span>
                                             <span style={{ fontSize: '0.75rem', fontWeight: 600, background: `${platform.color}15`, color: platform.color, padding: '2px 8px', borderRadius: '10px' }}>
-                                                {displayPercent.toFixed(0)}% Conversion
+                                                {percentage.toFixed(0)}% Conversion
                                             </span>
                                         </div>
                                         <span style={{ fontSize: '0.95rem', fontWeight: 800, color: platform.color }}>{displayCount} Leads</span>
@@ -348,7 +349,7 @@ const LeadsAnalytics = () => {
                                         <div
                                             style={{
                                                 height: '100%',
-                                                width: `${displayPercent}%`,
+                                                width: `${percentage}%`,
                                                 background: platform.color,
                                                 borderRadius: '4px',
                                                 transition: 'width 1s cubic-bezier(0.165, 0.84, 0.44, 1)'

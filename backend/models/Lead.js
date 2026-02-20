@@ -26,7 +26,7 @@ const leadSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['New', 'Hot', 'Warm', 'Cold', 'Converted'],
-        default: 'New'
+        default: 'Warm'
     },
     projectInterest: {
         type: String,

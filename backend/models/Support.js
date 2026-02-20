@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 
 const supportSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+    name: { type: String },
     email: { type: String, required: true },
     requestId: { type: String, unique: true },
     issueType: { type: String, default: 'General' },
