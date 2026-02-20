@@ -6,13 +6,18 @@ import {
     Kanban, Warning, ChartBar, CheckCircle, FilePdf,
     Link, Note, Package, Megaphone, GitDiff,
     ClipboardText, FileText, CaretRight, UploadSimple,
-    HardHat, Blueprint, TrendUp
+    HardHat, Blueprint, TrendUp, WarningCircle
 } from '@phosphor-icons/react';
+import RaiseRequestModal from '../../components/RaiseRequestModal';
+import UploadDrawingModal from '../../components/UploadDrawingModal';
 
 const CivilEngineerDashboard = () => {
     const [projects, setProjects] = useState([]);
     const [incidents, setIncidents] = useState([]);
+    const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showRaiseRequestModal, setShowRaiseRequestModal] = useState(false);
+    const [showUploadDrawingModal, setShowUploadDrawingModal] = useState(false);
 
     // Mock data for new features
     const [drawings] = useState([
@@ -42,22 +47,37 @@ const CivilEngineerDashboard = () => {
         socketService.on('incidentReported', (newIncident) => {
             setIncidents(prev => [newIncident, ...prev]);
         });
+        socketService.on('supportUpdated', (updatedRequest) => {
+            setRequests(prev => {
+                const index = prev.findIndex(r => r._id === updatedRequest._id);
+                if (index !== -1) {
+                    const newRequests = [...prev];
+                    newRequests[index] = updatedRequest;
+                    return newRequests;
+                }
+                return [updatedRequest, ...prev];
+            });
+        });
 
         return () => {
             socketService.off('project-added');
             socketService.off('project-updated');
             socketService.off('incidentReported');
+            socketService.off('supportUpdated');
         };
     }, []);
 
     const fetchData = async () => {
         try {
-            const [projectsRes, incidentsRes] = await Promise.all([
+            const user = JSON.parse(localStorage.getItem('user'));
+            const [projectsRes, incidentsRes, requestsRes] = await Promise.all([
                 axios.get(`${API_BASE_URL}/projects`).catch(() => ({ data: [] })),
-                axios.get(`${API_BASE_URL}/site-ops/incidents`).catch(() => ({ data: [] }))
+                axios.get(`${API_BASE_URL}/site-ops/incidents`).catch(() => ({ data: [] })),
+                user?.id ? axios.get(`${API_BASE_URL}/support/user/${user.id}`).catch(() => ({ data: [] })) : { data: [] }
             ]);
             setProjects(projectsRes.data || []);
             setIncidents(incidentsRes.data || []);
+            setRequests(requestsRes.data || []);
         } catch (error) {
             console.error("Error fetching civil engineer data:", error);
         } finally {
@@ -65,10 +85,46 @@ const CivilEngineerDashboard = () => {
         }
     };
 
+    const handleRaiseRequest = async (requestData) => {
+        const user = JSON.parse(localStorage.getItem('user'));
+        const payload = {
+            title: requestData.title,
+            issueType: requestData.requestType,
+            // message is required in DB - use fallback so Draft with empty message works
+            message: requestData.message?.trim() || `[${requestData.status}] ${requestData.title || requestData.requestType}`,
+            userId: user?.id,
+            email: user?.email,
+            projectName: projects.find(p => p._id === requestData.projectId)?.name || '',
+            category: 'Technical',
+            priority: requestData.priority,
+            location: requestData.location,
+            relatedTo: requestData.relatedTask,
+            // pass real base64 file data from the modal
+            attachments: (requestData.attachments || []).map(a => a.name || a),
+            standardsReference: requestData.standardsReference,
+            requestedAction: requestData.requestedAction,
+            assignTo: requestData.assignTo,
+            expectedTimeline: requestData.expectedTimeline,
+            impactIfDelayed: requestData.impactIfDelayed,
+            status: requestData.status
+        };
+
+        // Throw on error so the modal can catch and display it
+        const res = await axios.post(`${API_BASE_URL}/support`, payload);
+        setShowRaiseRequestModal(false);
+        fetchData(); // Refresh the requests list
+        return res;
+    };
+
+
     const StatusBadge = ({ status }) => {
         const colors = {
             'Approved': '#16a34a',
-            'Pending Review': '#ea580c',
+            'Under Review': '#ea580c',
+            'Submitted': '#0284c7',
+            'Actioned': '#7c3aed',
+            'Rejected': '#dc2626',
+            'Draft': '#64748b',
             'On Track': '#0284c7',
             'Review Needed': '#dc2626',
             'Completed': '#059669',
@@ -76,7 +132,11 @@ const CivilEngineerDashboard = () => {
         };
         const bgColors = {
             'Approved': '#dcfce7',
-            'Pending Review': '#ffedd5',
+            'Under Review': '#ffedd5',
+            'Submitted': '#e0f2fe',
+            'Actioned': '#f3e8ff',
+            'Rejected': '#fee2e2',
+            'Draft': '#f1f5f9',
             'On Track': '#e0f2fe',
             'Review Needed': '#fee2e2',
             'Completed': '#d1fae5',
@@ -134,10 +194,18 @@ const CivilEngineerDashboard = () => {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button className="action-btn" style={{ background: 'var(--pivot-blue)', color: 'white' }}>
+                    <button
+                        onClick={() => setShowRaiseRequestModal(true)}
+                        className="action-btn"
+                        style={{ background: 'var(--pivot-blue)', color: 'white' }}
+                    >
                         <Megaphone size={20} weight="bold" /> Raise Request
                     </button>
-                    <button className="action-btn" style={{ background: 'white', border: '1px solid #e2e8f0', color: '#1e293b' }}>
+                    <button
+                        className="action-btn"
+                        onClick={() => setShowUploadDrawingModal(true)}
+                        style={{ background: 'white', border: '1px solid #e2e8f0', color: '#1e293b' }}
+                    >
                         <UploadSimple size={20} weight="bold" /> Upload Drawing
                     </button>
                 </div>
@@ -313,6 +381,84 @@ const CivilEngineerDashboard = () => {
                     </FeatureCard>
                 </div>
 
+                {/* 10. Requests Tracking & History */}
+                <div style={{ gridColumn: 'span 3' }}>
+                    <div style={{ background: 'white', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Megaphone size={22} color="#2563eb" weight="fill" />
+                                My Raised Requests
+                            </h3>
+                            <button
+                                onClick={() => setShowRaiseRequestModal(true)}
+                                style={{ padding: '8px 16px', borderRadius: '10px', background: '#2563eb', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                <Megaphone size={16} weight="bold" /> + Raise New Request
+                            </button>
+                        </div>
+                        {requests.length === 0 ? (
+                            <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+                                <Megaphone size={40} weight="duotone" color="#cbd5e1" />
+                                <p style={{ marginTop: '1rem', fontWeight: 600 }}>No requests raised yet.</p>
+                                <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>Click "Raise Request" to submit your first technical request.</p>
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                                    <thead>
+                                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                                            {['Request ID', 'Title', 'Type', 'Assign To', 'Priority', 'Required By', 'Status', 'History'].map(h => (
+                                                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: '#475569', whiteSpace: 'nowrap' }}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {requests.map((req, i) => (
+                                            <tr key={req._id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                                                <td style={{ padding: '12px 16px', fontWeight: 700, color: '#2563eb', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                                                    {req.requestId || '—'}
+                                                </td>
+                                                <td style={{ padding: '12px 16px', maxWidth: '220px' }}>
+                                                    <div style={{ fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.title}</div>
+                                                    {req.projectName && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>{req.projectName}</div>}
+                                                </td>
+                                                <td style={{ padding: '12px 16px', color: '#475569', whiteSpace: 'nowrap' }}>{req.issueType || '—'}</td>
+                                                <td style={{ padding: '12px 16px', color: '#475569', whiteSpace: 'nowrap' }}>{req.assignTo || '—'}</td>
+                                                <td style={{ padding: '12px 16px' }}>
+                                                    <span style={{
+                                                        padding: '3px 10px', borderRadius: '20px', fontWeight: 700, fontSize: '0.75rem',
+                                                        background: req.priority === 'Critical' ? '#fef2f2' : req.priority === 'High' ? '#fff7ed' : '#f0fdf4',
+                                                        color: req.priority === 'Critical' ? '#dc2626' : req.priority === 'High' ? '#ea580c' : '#16a34a'
+                                                    }}>{req.priority}</span>
+                                                </td>
+                                                <td style={{ padding: '12px 16px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                                    {req.expectedTimeline ? new Date(req.expectedTimeline).toLocaleDateString() : '—'}
+                                                </td>
+                                                <td style={{ padding: '12px 16px' }}>
+                                                    <StatusBadge status={req.status} />
+                                                </td>
+                                                <td style={{ padding: '12px 16px' }}>
+                                                    {req.approvalHistory && req.approvalHistory.length > 0 ? (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                            {req.approvalHistory.slice(-2).map((h, idx) => (
+                                                                <div key={idx} style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                                                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#2563eb', flexShrink: 0 }}></span>
+                                                                    <span>{h.status}</span>
+                                                                    <span style={{ color: '#94a3b8' }}>by {h.actor}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>—</span>}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* 9. Engineer Reports */}
                 <div style={{ gridColumn: 'span 3' }}>
                     <div style={{ background: '#0f172a', padding: '1.5rem', borderRadius: '20px', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -364,6 +510,20 @@ const CivilEngineerDashboard = () => {
                     transform: translateY(-2px);
                 }
             `}</style>
+            {showRaiseRequestModal && (
+                <RaiseRequestModal
+                    onClose={() => setShowRaiseRequestModal(false)}
+                    onSave={handleRaiseRequest}
+                    projects={projects}
+                />
+            )}
+            {showUploadDrawingModal && (
+                <UploadDrawingModal
+                    onClose={() => setShowUploadDrawingModal(false)}
+                    projects={projects}
+                    onSuccess={() => fetchData()}
+                />
+            )}
         </div>
     );
 };

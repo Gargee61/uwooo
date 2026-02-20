@@ -60,4 +60,23 @@ router.post('/incidents', async (req, res) => {
     }
 });
 
+// Update an incident
+router.patch('/incidents/:id', async (req, res) => {
+    try {
+        const updated = await Incident.findByIdAndUpdate(
+            req.params.id,
+            { $set: req.body },
+            { new: true }
+        );
+        if (!updated) return res.status(404).json({ message: 'Incident not found' });
+
+        const io = req.app.get('io');
+        if (io) io.emit('incidentUpdated', updated);
+
+        res.json(updated);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
 export default router;

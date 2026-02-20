@@ -100,3 +100,24 @@ export const chatService = {
 };
 
 export default api;
+
+export const notificationService = {
+    getAll: async (userId) => {
+        const response = await api.get('/notifications', { headers: { 'x-user-id': userId } });
+        return response.data;
+    },
+    markAsRead: async (id) => {
+        const response = await api.patch(`/notifications/${id}/read`);
+        return response.data;
+    },
+    getSettings: async (userId) => {
+        const response = await api.get('/notifications/settings', { headers: { 'x-user-id': userId } });
+        return response.data;
+    },
+    updateSettings: async (settings) => {
+        const response = await api.put('/notifications/settings', settings, {
+            headers: { 'x-user-id': settings.userId }
+        });
+        return response.data;
+    }
+};

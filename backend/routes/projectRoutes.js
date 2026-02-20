@@ -15,6 +15,19 @@ router.get('/', async (req, res) => {
     }
 });
 
+// @route   GET /api/projects/:id
+// @desc    Get a single project by ID
+router.get('/:id', async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id).populate('assignedTo', 'name email role');
+        if (!project) return res.status(404).json({ message: 'Project not found' });
+        res.json(project);
+    } catch (err) {
+        console.error('❌ Error fetching project:', err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // @route   POST /api/projects
 // @desc    Create a new project and emit socket event
 router.post('/', async (req, res) => {
@@ -49,6 +62,31 @@ router.post('/', async (req, res) => {
         res.status(201).json(savedProject);
     } catch (err) {
         console.error('❌ Error saving project:', err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   PATCH /api/projects/:id
+// @desc    Update a project and emit socket event
+router.patch('/:id', async (req, res) => {
+    try {
+        const updated = await Project.findByIdAndUpdate(
+            req.params.id,
+            { $set: req.body },
+            { new: true }
+        ).populate('assignedTo', 'name email role');
+
+        if (!updated) return res.status(404).json({ message: 'Project not found' });
+
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('projectUpdated', updated);
+            console.log('📢 Real-time event emitted: projectUpdated', updated._id);
+        }
+
+        res.json(updated);
+    } catch (err) {
+        console.error('❌ Error updating project:', err.message);
         res.status(500).send('Server Error');
     }
 });

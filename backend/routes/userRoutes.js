@@ -30,7 +30,7 @@ router.post('/signup', async (req, res) => {
             email,
             password: hashedPassword,
             role: role || 'Client',
-            status: role === 'Admin' ? 'Active' : 'Pending'
+            status: 'Active' // Set to Active by default for development/demo ease
         });
 
         const savedUser = await newUser.save();

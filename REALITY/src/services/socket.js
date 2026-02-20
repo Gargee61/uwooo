@@ -27,9 +27,9 @@ class SocketService {
         this.socket.on("connect_error", (error) => {
             // Silencing aggressive error logging if backend isn't running
             console.warn("[SOCKET] Service offline. Real-time features disabled.");
-            if (this.socket.active === false) {
-                this.socket.disconnect();
-            }
+            // console.warn("[SOCKET] Service offline. Real-time features disabled.");
+            // Allow socket.io to retry connection automatically
+
         });
 
         return this.socket;

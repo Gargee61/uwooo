@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import LeadsAnalytics from './pages/LeadsAnalytics';
 import SiteVisits from './pages/SiteVisits';
 import ManageAttendance from './pages/dashboards/ManageAttendance';
+import ManageSchedule from './pages/dashboards/ManageSchedule';
 import { authService } from './services/api';
 import socketService from './services/socket';
 import './App.css';
@@ -60,6 +61,7 @@ function DashboardApp() {
     if (currentPage === 'visits') return <SiteVisits />;
     if (currentPage === 'projects') return <Projects />;
     if (currentPage === 'manage-attendance') return <ManageAttendance setCurrentPage={setCurrentPage} />;
+    if (currentPage === 'manage-schedule') return <ManageSchedule setCurrentPage={setCurrentPage} />;
 
     // Default to role-based dashboard if current page is 'dashboard' or unknown
     switch (user?.role?.toLowerCase()) {

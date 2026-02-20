@@ -308,16 +308,20 @@ const BuilderDashboard = () => {
                             "Based on the steel shortage in North Suburbs, I recommend pre-stocking rebar for **Green Valley residency** within the next 48 hours to avoid a 12% cost hike."
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                            <button style={{
-                                width: '100%', padding: '12px', borderRadius: '12px',
-                                background: 'white', color: '#001a4d', border: 'none',
-                                fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer'
-                            }}>Analyze Planning</button>
-                            <button style={{
-                                width: '100%', padding: '12px', borderRadius: '12px',
-                                background: 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.3)',
-                                fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer'
-                            }}>Generate Schedule</button>
+                            <button
+                                onClick={() => setShowAIPlanningModal(true)}
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '12px',
+                                    background: 'white', color: '#001a4d', border: 'none',
+                                    fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer'
+                                }}>Analyze Planning</button>
+                            <button
+                                onClick={() => setShowScheduleGenerationModal(true)}
+                                style={{
+                                    width: '100%', padding: '12px', borderRadius: '12px',
+                                    background: 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.3)',
+                                    fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer'
+                                }}>Generate Schedule</button>
                         </div>
                         <Robot size={100} weight="light" style={{ position: 'absolute', bottom: '-20px', right: '-20px', opacity: 0.1 }} />
                     </div>

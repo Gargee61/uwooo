@@ -23,6 +23,7 @@ router.post('/login', async (req, res) => {
         const user = await User.findOne({ email });
 
         if (!user) {
+            console.log(`❌ Login failed: User ${email} not found`);
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
@@ -46,9 +47,11 @@ router.post('/login', async (req, res) => {
 
         // 3. Verify Status (Admin Approval Rule)
         if (user.status === 'Pending' && user.role !== 'Admin') {
+            console.log(`❌ Login blocked: ${email} is pending approval`);
             return res.status(403).json({ error: 'Your account is pending admin approval.' });
         }
         if (user.status === 'Inactive') {
+            console.log(`❌ Login blocked: ${email} is inactive`);
             return res.status(403).json({ error: 'Your account has been deactivated.' });
         }
 

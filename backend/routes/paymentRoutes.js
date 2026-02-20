@@ -14,6 +14,17 @@ router.get('/', async (req, res) => {
     }
 });
 
+// @route   GET /api/payments/project/:projectId
+router.get('/project/:projectId', async (req, res) => {
+    try {
+        const payments = await Payment.find({ projectId: req.params.projectId }).sort({ createdAt: -1 });
+        res.json(payments);
+    } catch (err) {
+        console.error('❌ Error fetching payments:', err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // @route   POST /api/payments
 router.post('/', async (req, res) => {
     try {
@@ -21,7 +32,7 @@ router.post('/', async (req, res) => {
         const saved = await newPayment.save();
 
         const io = req.app.get('io');
-        if (io) io.emit('payment-added', saved);
+        if (io) io.emit('paymentUpdated', saved);
 
         res.status(201).json(saved);
     } catch (err) {

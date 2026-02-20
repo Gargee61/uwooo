@@ -24,6 +24,12 @@ const siteLogSchema = new mongoose.Schema({
     photos: [{
         type: String
     }],
+    videos: [{
+        type: String
+    }],
+    documents: [{
+        type: String
+    }],
     timestamp: {
         type: Date,
         default: Date.now

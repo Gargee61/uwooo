@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import 'dotenv/config'; // server restart trigger
 import dns from 'dns';
 
 // Force DNS to use Google's servers to resolve MongoDB SRV records
@@ -26,6 +26,14 @@ import milestoneRoutes from "./routes/milestoneRoutes.js";
 import siteVisitRoutes from "./routes/siteVisitRoutes.js";
 import redirectRoutes from "./routes/redirectRoutes.js";
 import siteOperationsRoutes from './routes/siteOperationsRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import NotificationService from './services/NotificationService.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 const app = express();
@@ -56,6 +64,7 @@ const io = new Server(server, {
         methods: ["GET", "POST", "PATCH"],
     },
 });
+NotificationService.setIo(io);
 
 io.on("connection", (socket) => {
     console.log("🟢 Socket connected:", socket.id);
@@ -94,6 +103,11 @@ app.use("/api/milestones", milestoneRoutes);
 app.use("/api/site-visits", siteVisitRoutes);
 app.use("/api/redirect", redirectRoutes);
 app.use("/api/site-ops", siteOperationsRoutes);
+app.use("/api/upload", uploadRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+// Serve uploaded files as static assets
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 /* -------------------- HEALTH CHECK -------------------- */

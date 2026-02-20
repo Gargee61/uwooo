@@ -1,20 +1,60 @@
 import React from 'react';
 import { MagnifyingGlass, Bell, ChatCircleDots } from '@phosphor-icons/react';
 import socketService from '../services/socket';
+import { notificationService } from '../services/api';
+import NotificationPanel from './NotificationPanel';
+import { useNavigate } from 'react-router-dom';
 
 const Header = ({ user, onLogout }) => {
     // const [isConnected, setIsConnected] = React.useState(socketService.socket?.connected || false);
     const [showNotifications, setShowNotifications] = React.useState(false);
-    const [notifications, setNotifications] = React.useState([
-        { id: 1, title: 'New High-Score Lead', time: '2 mins ago', type: 'Hot', detail: 'Johnathan Smith just inquired about Skyline Towers.' },
-        { id: 2, title: 'Site Visit Confirmed', time: '1 hour ago', type: 'Warm', detail: 'Elena Rodriguez scheduled a visit for Saturday.' },
-        { id: 3, title: 'Inventory Alert', time: '3 hours ago', type: 'Cold', detail: 'Only 12 units remaining in Phase 1 of Green Valley.' },
-    ]);
-    const [unread, setUnread] = React.useState(true);
+    const [notifications, setNotifications] = React.useState([]);
+    const [unread, setUnread] = React.useState(false);
+
+    // Helper to format time
+    const formatTime = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+
+        if (diffInSeconds < 60) return 'Just now';
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} mins ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+        return date.toLocaleDateString();
+    };
+
+    // Helper to map priority to UI type
+    const getNotificationType = (priority) => {
+        switch (priority) {
+            case 'urgent': return 'Hot';
+            case 'high': return 'Hot';
+            case 'medium': return 'Warm';
+            case 'low': return 'Cold';
+            default: return 'Warm';
+        }
+    };
+
+    const fetchNotifications = async () => {
+        if (!user?._id) return;
+        try {
+            const data = await notificationService.getAll(user._id);
+            const mapped = data.map(n => ({
+                id: n._id,
+                title: n.title,
+                time: formatTime(n.createdAt),
+                type: getNotificationType(n.priority),
+                detail: n.message,
+                status: n.status
+            }));
+            setNotifications(mapped);
+            setUnread(mapped.some(n => n.status === 'unread'));
+        } catch (err) {
+            console.error('Failed to fetch notifications:', err);
+        }
+    };
 
     React.useEffect(() => {
-        // const handleConnect = () => setIsConnected(true);
-        // const handleDisconnect = () => setIsConnected(false);
+        fetchNotifications();
 
         // socketService.on('connect', handleConnect);
         // socketService.on('disconnect', handleDisconnect);
@@ -22,11 +62,12 @@ const Header = ({ user, onLogout }) => {
         socketService.on('notification-push', (notif) => {
             console.log('[REAL-TIME] Notification received:', notif.title);
             const newNotif = {
-                id: Date.now(),
+                id: notif._id || Date.now(),
                 title: notif.title,
                 time: 'Just now',
-                type: notif.type || 'Hot',
-                detail: notif.message
+                type: getNotificationType(notif.priority),
+                detail: notif.message,
+                status: 'unread'
             };
             setNotifications(prev => [newNotif, ...prev]);
             setUnread(true);
@@ -37,11 +78,32 @@ const Header = ({ user, onLogout }) => {
             // socketService.off('disconnect', handleDisconnect);
             socketService.off('notification-push');
         };
-    }, []);
+    }, [user?._id]);
 
-    const handleToggleNotifications = () => {
+    const handleToggleNotifications = async () => {
         setShowNotifications(!showNotifications);
-        if (!showNotifications) setUnread(false);
+        if (!showNotifications && unread) {
+            // Optimistically mark all as read in UI
+            // In a real app, you might want a specific "Mark all read" button or action
+            // For now, we will just keep the red dot logic as is (removes on open)
+            setUnread(false);
+
+            // Optionally mark specific visible notifications as read in backend
+            // const unreadIds = notifications.filter(n => n.status === 'unread').map(n => n.id);
+            // unreadIds.forEach(id => notificationService.markAsRead(id));
+        }
+    };
+
+    const handleMarkAllRead = async () => {
+        try {
+            const unreadIds = notifications.filter(n => n.status === 'unread').map(n => n.id);
+            await Promise.all(unreadIds.map(id => notificationService.markAsRead(id)));
+
+            setNotifications(prev => prev.map(n => ({ ...n, status: 'read' })));
+            setUnread(false);
+        } catch (err) {
+            console.error('Failed to mark all as read:', err);
+        }
     };
 
     const headerStyle = {
@@ -57,6 +119,13 @@ const Header = ({ user, onLogout }) => {
         position: 'sticky',
         top: 0,
         zIndex: 90,
+    };
+
+    const navigate = useNavigate();
+
+    const handleSettingsClick = () => {
+        navigate('/app/settings', { state: { activeTab: 'notifications' } });
+        setShowNotifications(false);
     };
 
     return (
@@ -95,34 +164,14 @@ const Header = ({ user, onLogout }) => {
 
                     {showNotifications && (
                         <div style={{
-                            position: 'absolute', top: '45px', right: '0', width: '350px',
-                            background: 'var(--glass-bg)', backdropFilter: 'blur(15px)',
-                            borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                            border: '1px solid var(--glass-border)', padding: '1rem', overflow: 'hidden',
-                            animation: 'slideInDown 0.3s ease-out'
+                            position: 'absolute', top: '50px', right: '-10px',
+                            zIndex: 1000
                         }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--glass-border)' }}>
-                                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Recent Alerts</h4>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--pivot-blue)', fontWeight: 700, cursor: 'pointer' }}>Mark all as read</span>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxHeight: '400px', overflowY: 'auto' }}>
-                                {notifications.map(n => (
-                                    <div key={n.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--pivot-blue-soft)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{n.title}</span>
-                                            <span style={{
-                                                fontSize: '0.6rem', padding: '2px 8px', borderRadius: '10px', fontWeight: 800,
-                                                background: n.type === 'Hot' ? '#ffebeb' : (n.type === 'Warm' ? '#fff4eb' : '#ebf4ff'),
-                                                color: n.type === 'Hot' ? '#ff4d4d' : (n.type === 'Warm' ? '#ff9f4d' : '#4d9fff')
-                                            }}>{n.type}</span>
-                                        </div>
-                                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--charcoal)', opacity: 0.8, lineHeight: '1.4' }}>{n.detail}</p>
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--charcoal)', opacity: 0.5 }}>{n.time}</span>
-                                    </div>
-                                ))}
-                            </div>
+                            <NotificationPanel
+                                notifications={notifications}
+                                onMarkRead={handleMarkAllRead}
+                                onSettingsClick={handleSettingsClick}
+                            />
                         </div>
                     )}
                 </div>
