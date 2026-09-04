@@ -114,24 +114,6 @@ Server (Node/Express)
  ├── controllers
  ├── middleware
 ________________________________________
- 
- 
-8. Competitive Comparison
-Reality-OS is not a generic CRM — it is builder-centric.
-Feature / Capability	Salesforce Einstein	HubSpot AI	Zoho CRM (Zia)	Freshsales (Freddy)	Reality-OS (Your Project)
-Target Audience	Enterprises	SMBs	SMB–Mid	SMB sales	Real Estate Builders
-Lead Scoring	Advanced predictive	Predictive	AI scoring	AI scoring	Builder-specific scoring (budget, location, visit history)
-AI Communication	Email drafting	Email content	Workflow replies	Suggestions	Auto SMS/WhatsApp follow-ups
-Conversation Intelligence	Call summaries	Basic tracking	Analytics	Engagement signals	Interaction history tracking
-Predictive Forecasting	Revenue forecast	Basic	Trend analytics	Deal predictions	Conversion probability for property leads
-Workflow Automation	Strong	Yes	Yes	Yes	Scheduling + alerts + follow-ups
-Site Visit Scheduling	❌	❌	❌	❌	Built-in AI visit scheduling
-Builder Context Awareness	❌	❌	❌	❌	Understands builder workflow & sales process
-Ease of Setup	Complex	Easy	Moderate	Easy	Simple MERN deployment
-Cost	High	Mixed	Affordable	Affordable	Low cost, custom-built
-Customizability	High	Moderate	High	Moderate	Fully customizable
-Real-Time Alerts	Yes	Yes	Yes	Yes	AI + rule-based builder alerts
-________________________________________
  Key Differentiator
 Reality-OS = CRM + AI Sales Assistant + Builder Operations System
 Traditional CRMs manage customers.
